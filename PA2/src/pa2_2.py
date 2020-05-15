@@ -14,10 +14,12 @@ class NeuralNetwork:
         """
         Adds a new Layer to your Neural Network.
         The first Layer is the InputLayer and the last one is the Output.
+            - stores the __inputLayer and __outputLayer
+            - stores the posterior Layer for each Layer
         :param size: Number of Neuron added to the Layer
         :param activationFunction: static Neuron-Function. i.e. tanh()
         """
-        anteriorLayer = self.__outputLayer
+        anteriorLayer = self.__outputLayer  # None if its the first input Layer
         newLayer = []
 
         # create Neurons and append to the Layer
@@ -29,7 +31,7 @@ class NeuralNetwork:
         self.__outputLayer = newLayer
         self.__inputLayer = self.__layers[0]
 
-        # add posteriorLayers to Neurons
+        # set the actual Layer to the anterior layer as posterior layer
         if len(self.__layers) > 1:
             for n in anteriorLayer:
                 if isinstance(n, Neuron):
@@ -69,22 +71,22 @@ class NeuralNetwork:
         if len(labels) != len(self.__outputLayer):
             raise NameError("Not enough Labels for the Number of output Neurons")
 
-        # update the output Layers Weight
-        for i in range(0, len(self.__outputLayer)):
-            n = self.__outputLayer[i]
-            n.updateWeight(learningRate, labels[i])
-
         # update the hidden Layers Weight
         self.__layers.reverse()
         for layer in self.__layers:
             if layer == self.__outputLayer:
+                # update the output Layers Weight
+                for i in range(0, len(self.__outputLayer)):
+                    n = self.__outputLayer[i]
+                    n.updateWeight(learningRate, labels[i])
+            elif layer == self.__inputLayer:
                 continue
-            if layer == self.__inputLayer:
-                continue
-            for n in layer:
-                n.updateWeight(learningRate)
+            else:
+                for n in layer:
+                    n.updateWeight(learningRate)
         self.__layers.reverse()
 
+    '''
     def getWeightPattern(self):
         backup = []
         for layer in self.__layers:
@@ -100,10 +102,130 @@ class NeuralNetwork:
                 if isinstance(n, Neuron):
                     n.setWeights(backup[i])
                     i += 1
+    '''
+
+    def train(self, trainingsData, labelSize, learningRate):
+        for data in trainingsData:
+            self.forwardPropagation(data[:-labelSize])
+            self.backwardPropagation(learningRate, data[-labelSize:])
+
+    def validate(self, validationData, labelSize=1):
+        mse = 0
+        for data in validationData:
+            self.forwardPropagation(data[:-labelSize])
+            mse += self.getMeanSquareError(data[-labelSize:])
+        return mse
+
+    def execute(self, executionData):
+        for data in executionData:
+            out = self.forwardPropagation(data)[0]
+            if out > 0:
+                print("+1")
+            else:
+                print("-1")
+
+    def trainValidateAndExecute(self, trainingsData, validationData, executionData, epochs, learningRate,
+                                reducingLearningRate=0.0, goalMSE=0):
+        for i in range(0, epochs):
+            mse = self.validate(validationData, 1)
+            if mse <= goalMSE:
+                break
+            self.train(trainingsData, 1, learningRate - (i * reducingLearningRate))
+
+        self.execute(executionData)
+
+    def animatedTrainValidateAndExecute(self, trainingsData, validationData, executionData, epochs, learningRate,
+                                        reducingLearningRate=0.0, goalMSE=0):
+        if len(trainingsData[0]) != 3:
+            raise ValueError("trainings data must have a length of 3")
+        if len(validationData[0]) != 3:
+            raise ValueError("trainings data must have a length of 3")
+        if len(executionData[0]) != 2:
+            raise ValueError("execution data must have a length of 2")
+
+        rows = 20
+        columns = 20
+        patternData = [[i / columns, j / rows] for i in range(-columns, columns) for j in range(-rows, rows)]
+
+        plt.ion()
+        fig, axis = plt.subplots(2)
+        self.draw2DLabel(axis[1], trainingsData + validationData, 'v')
+
+        for i in range(0, epochs):
+            # Validation
+            mse = self.validate(validationData, 1)
+            plt.suptitle('Epoch: {}, mse: {}'.format(i, mse))
+            plt.pause(0.0001)
+            # draw Validation
+            if i % 10 == 9:
+                axis[0].clear()
+                self.draw2DPattern(axis[0], patternData, 'o')
+                self.draw2DLabel(axis[0], validationData, 'v', 1, "Orange", "Red")
+                plt.pause(0.0001)
+
+            if mse <= goalMSE:
+                axis[0].clear()
+                self.draw2DPattern(axis[0], patternData, 'o')
+                self.draw2DLabel(axis[0], validationData, 'v', 1, "Orange", "Red")
+                plt.suptitle('Epoch: {}, mse: {}, GOAL MSE REACHED!'.format(i, mse))
+                plt.pause(3)
+                break
+
+            # Training
+            self.train(trainingsData, 1, learningRate - (i * reducingLearningRate))
+
+        plt.suptitle('Data executed, epoch{}'.format(epochs - 1))
+        self.draw2DPattern(axis[1], executionData, 'o', 1, "SpringGreen", "Purple")
+        plt.pause(3)
+        self.execute(executionData)
+
+    @staticmethod
+    def draw2DLabel(axis, inputData, style='o', alpha=1, colorPos="Green", colorNeg="Indigo"):
+        if len(inputData[0]) != 3:
+            raise ValueError("input data must have a length of 3")
+
+        # axis.clear()
+        posX = []
+        posY = []
+        negX = []
+        negY = []
+        for data in inputData:
+            if data[2] > 0:
+                posX.append(data[0])
+                posY.append(data[1])
+            else:
+                negX.append(data[0])
+                negY.append(data[1])
+
+        axis.plot(posX, posY, style, alpha=alpha, color=colorPos)
+
+        axis.plot(negX, negY, style, alpha=alpha, color=colorNeg)
+
+    def draw2DPattern(self, axis, inputData, style='o', alpha=1, colorPos="Green", colorNeg="Indigo"):
+        if len(inputData[0]) != 2:
+            raise ValueError("input data must have a length of 3")
+
+        # axis.clear()
+
+        posX = []
+        posY = []
+        negX = []
+        negY = []
+        for data in inputData:
+            out = self.forwardPropagation(data[:2])[0]
+            if out > 0:
+                posX.append(data[0])
+                posY.append(data[1])
+            else:
+                negX.append(data[0])
+                negY.append(data[1])
+
+        axis.plot(posX, posY, style, alpha=alpha, color=colorPos)
+
+        axis.plot(negX, negY, style, alpha=alpha, color=colorNeg)
 
 
 class Neuron:
-
     def __init__(self, anteriorLayer, activationFunction):
         """
         Create a new Neuron with the linked anterior Layer and the activation-function
@@ -116,11 +238,12 @@ class Neuron:
         self.__posteriorLayer = None
         self.__activationFunction = activationFunction
         self.__anteriorLayer = anteriorLayer
-        self.__weights = []
+        self.__weights = {}
         if not self.__isInputLayer():
             # Add weights in size of anterior Layer plus Bias-Weight
-            for i in range(0, len(self.__anteriorLayer) + 1):
-                self.__weights.append(Neuron.randomWeight())
+            for n in self.__anteriorLayer:
+                self.__weights[n] = Neuron.randomWeight()
+            self.__weights['bias'] = Neuron.randomWeight()
 
     def setPosteriorLayer(self, posteriorLayer):
         self.__posteriorLayer = posteriorLayer
@@ -134,10 +257,10 @@ class Neuron:
     def getNet(self):
         if not self.__isInputLayer():
             self.__net = 0
-            for i in range(0, len(self.__anteriorLayer)):
-                self.__net += self.__anteriorLayer[i].getOut() * self.__weights[i]
+            for n in self.__anteriorLayer:
+                self.__net += n.getOut() * self.getWeights(n)
             # add Bias Weight
-            self.__net += self.__weights[-1]
+            self.__net += self.__weights['bias']
         return self.__net
 
     def getOut(self):
@@ -145,13 +268,19 @@ class Neuron:
             self.__out = self.__activationFunction(self.getNet())
         return self.__out
 
-    def getWeights(self, index=-1):
-        if index == -1:
+    def getWeights(self, weightKey=None):
+        """
+        get the weight or the whole weight dictionary of a specific neuron
+        :param weightKey: Neuron or 'bias' that points to this associating weight
+        :return: whole dictionary, if weightKey is none, or the associating weight
+        """
+        if weightKey is None:
             return self.__weights.copy()
         else:
-            if index < 0 or index >= len(self.__weights):
-                raise NameError("Index in weights is out of Range")
-            return self.__weights[index]
+            weight = self.__weights.get(weightKey)
+            if weight is None:
+                raise KeyError("key is not a member of weight dictionary")
+            return weight
 
     def getDelta(self):
         if self.__isInputLayer():
@@ -174,19 +303,17 @@ class Neuron:
             self.__delta = self.__activationFunction(self.getNet(), True) * (label - self.getOut())
         else:  # Hidden Layer
             posteriorDeltaSum = 0
-            for i in range(0, len(self.__posteriorLayer)):
-                n = self.__posteriorLayer[i]
-                posteriorDeltaSum += n.getDelta() * n.getWeights(i)
+            for n in self.__posteriorLayer:
+                posteriorDeltaSum += n.getDelta() * n.getWeights(self)
             self.__delta = self.__activationFunction(self.getNet(), True) * posteriorDeltaSum
 
         # update the weights
-        for i in range(0, len(self.__weights) - 1):
-            n = self.__anteriorLayer[i]
-            deltaWeight = learningRate * self.__delta * n.getOut()
-            self.__weights[i] += deltaWeight
-        # bias
-        deltaWeight = learningRate * self.__delta * 1
-        self.__weights[-1] += deltaWeight
+        for n in self.__weights.keys():
+            if n == "bias":
+                deltaWeight = learningRate * self.__delta
+            else:
+                deltaWeight = learningRate * self.__delta * n.getOut()
+            self.__weights[n] += deltaWeight
 
     def __isInputLayer(self):
         return self.__anteriorLayer is None or len(self.__anteriorLayer) == 0
@@ -218,7 +345,7 @@ class Neuron:
 
     @staticmethod
     def randomWeight():
-        return random.randrange(-100, 100, 1) / 100000
+        return random.randrange(-100, 100, 1) / 100  # 000
 
 
 def loadInputData():
@@ -275,69 +402,19 @@ def loadInputData():
 
 
 def main():
+    epochs = 120
+    learningRate = 0.1
+    reducingLearningRate = 0.0001
+
     nn = NeuralNetwork()
     nn.addLayer(2, None)
-    nn.addLayer(3, Neuron.tanh)
+    nn.addLayer(2, Neuron.tanh)
     nn.addLayer(1, Neuron.tanh)
 
-    trainingSet, validationSet, executionData = loadInputData()
+    trainingData, validationData, executionData = loadInputData()
 
-    negativeX = []
-    negativeY = []
-    positiveX = []
-    positiveY = []
-    for data in trainingSet:
-        if data[2] == -1:
-            negativeX.append(data[0])
-            negativeY.append(data[1])
-        else:
-            positiveX.append(data[0])
-            positiveY.append(data[1])
-
-    for data in validationSet:
-        if data[2] == -1:
-            negativeX.append(data[0])
-            negativeY.append(data[1])
-        else:
-            positiveX.append(data[0])
-            positiveY.append(data[1])
-
-    plt.plot(negativeX, negativeY, "o", label="line 1")
-    plt.plot(positiveX, positiveY, "o", label="line 2")
-
-    for i in range(0, 1000):
-
-        for data in trainingSet:
-            nn.forwardPropagation(data[:2])
-            nn.backwardPropagation(0.01, data[2:])
-
-        for data in validationSet:
-            nn.forwardPropagation(data[:2])
-            nn.backwardPropagation(0.01, data[2:])
-
-    negX = []
-    negY = []
-    posX = []
-    posY = []
-    #executionData = []
-    # for i in range(-100, 100):
-    #     for j in range(-100, 100):
-    #         executionData.append([i / 100, j / 100])
-
-    for data in executionData:
-        trueOutput = nn.forwardPropagation(data[:2])[0]
-        if trueOutput > 0:
-            posX.append(data[0])
-            posY.append(data[1])
-            print("+1")
-        else:
-            negX.append(data[0])
-            negY.append(data[1])
-            print("-1")
-
-    plt.plot(negX, negY, "o", label="line 3")
-    plt.plot(posX, posY, "o", label="line 4")
-    plt.show()
+    nn.animatedTrainValidateAndExecute(trainingData, validationData, executionData, epochs, learningRate,
+                               reducingLearningRate)
 
 
 if __name__ == "__main__":

@@ -402,13 +402,14 @@ def loadInputData():
 
 
 def main():
-    epochs = 120
+    epochs = 400
     learningRate = 0.1
     reducingLearningRate = 0.0001
 
     nn = NeuralNetwork()
     nn.addLayer(2, None)
-    nn.addLayer(2, Neuron.tanh)
+    nn.addLayer(6, Neuron.tanh)
+    nn.addLayer(3, Neuron.tanh)
     nn.addLayer(1, Neuron.tanh)
 
     trainingData, validationData, executionData = loadInputData()

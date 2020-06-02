@@ -14,6 +14,15 @@ class TestPa2v2(unittest.TestCase):
     def test_example3(self):
         self.exampleN(3)
 
+    def test_example4(self):
+        self.exampleN(4)
+
+    def test_example5(self):
+        self.exampleN(5)
+
+    def test_example6(self):
+        self.exampleN(6)
+
     def exampleN(self, n):
 
         os.system(os.path.realpath(pa2_2.__file__) + " < example\\input{}.txt > _output{}".format(n, n))

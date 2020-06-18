@@ -1,6 +1,8 @@
 import unittest
+import sys
 import os
-from PA2.src import pa2_2
+from pathlib import Path
+from PA2.src.utils import get_project_root
 
 
 class TestPa2v2(unittest.TestCase):
@@ -24,23 +26,32 @@ class TestPa2v2(unittest.TestCase):
         self.exampleN(6)
 
     def exampleN(self, n):
+        root_path = get_project_root(True)
+        app_path = root_path + str(Path("PA2/src/pa2_2.py"))
+        input_path = root_path + str(Path("PA2/unittest/example/input{}.txt".format(n)))
+        output_path = root_path + str(Path("PA2/unittest/_output{}.txt".format(n)))
+        valid_path = root_path + str(Path("PA2/unittest/example/output{}.txt".format(n)))
 
-        os.system(os.path.realpath(pa2_2.__file__) + " < example\\input{}.txt > _output{}".format(n, n))
+        if sys.platform == 'linux':
+            os.system("bash " + app_path + " < " + input_path + " > " + output_path)
+        else:  # Windows
+            os.system(app_path + " < " + input_path + " > " + output_path)
 
         o1 = "o1"
         o2 = "o2"
         try:
-            outputFile1 = open("example\\output{}.txt".format(n), "r")
-            outputFile2 = open("_output{}".format(n), "r")
 
-            o1 = outputFile1.read()
-            o2 = outputFile2.read()
+            output_file1 = open(valid_path, "r")
+            output_file2 = open(output_path, "r")
 
-            outputFile1.close()
-            outputFile2.close()
+            o1 = output_file1.read()
+            o2 = output_file2.read()
+
+            output_file1.close()
+            output_file2.close()
         finally:
-            if os.path.isfile("_output{}".format(n)):
-                os.remove("_output{}".format(n))
+            if os.path.isfile(output_path):
+                os.remove(output_path)
 
         self.assertEqual(o1.strip(), o2.strip())
 

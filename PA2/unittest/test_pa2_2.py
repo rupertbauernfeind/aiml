@@ -33,7 +33,7 @@ class TestPa2v2(unittest.TestCase):
         valid_path = root_path + str(Path("PA2/unittest/example/output{}.txt".format(n)))
 
         if sys.platform == 'linux':
-            os.system("bash " + app_path + " < " + input_path + " > " + output_path)
+            os.system("python3 " + app_path + " < " + input_path + " > " + output_path)
         else:  # Windows
             os.system(app_path + " < " + input_path + " > " + output_path)
 

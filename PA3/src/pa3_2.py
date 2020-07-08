@@ -35,10 +35,10 @@ class VectorQuantization:
             self.clusters[i].w1 = most_dist_pattern[0]
             self.clusters[i].w2 = most_dist_pattern[1]
 
-    def train(self, x, y):
+    def train(self, x, y, learning_rate):
         # Get the winning Cluster
         c_win = self.__get_winning_cluster(x, y)
-        c_win.update_weight(x, y)
+        c_win.update_weight(x, y, learning_rate)
         return c_win
 
     def __get_winning_cluster(self, x, y):
@@ -77,9 +77,9 @@ class Cluster:
         dy = self.w2 - y
         return math.sqrt((dx ** 2) + (dy ** 2))
 
-    def update_weight(self, x, y):
-        self.w1 += (x - self.w1) * 0.1
-        self.w2 += (y - self.w2) * 0.1
+    def update_weight(self, x, y, learning_rate):
+        self.w1 += (x - self.w1) * learning_rate
+        self.w2 += (y - self.w2) * learning_rate
 
 
 def load_normalized_input_data():
@@ -132,18 +132,20 @@ if __name__ == "__main__":
     numberOfClusters, patterns, max_val = load_normalized_input_data()
     vectorQuantization = VectorQuantization(numberOfClusters)
     vectorQuantization.center_weights(patterns)
-    for _ in range(0, 3):
+    for i in range(1, 1000):
+        axis[0].clear()
         for p in patterns:
-            axis[0].clear()
-            c_win = vectorQuantization.train(p[0], p[1])
-            axis[1].plot(p[0], p[1], 'o', 0.75, c=c_win.color)
+            c_win = vectorQuantization.train(p[0], p[1], 0.1/i)
+        axis[1].plot(p[0], p[1], 'o', 0.75, c=c_win.color)
 
-            vectorQuantization.printClusters()
-            axis[0].set_xlim(-1, 1)
-            axis[0].set_ylim(-1, 1)
-            axis[1].set_xlim(-1, 1)
-            axis[1].set_ylim(-1, 1)
-            plt.pause(0.05)
+        vectorQuantization.printClusters()
+        axis[0].set_xlim(-1, 1)
+        axis[0].set_ylim(-1, 1)
+        axis[1].set_xlim(-1, 1)
+        axis[1].set_ylim(-1, 1)
+        if isinstance(fig, plt.Figure):
+            fig.suptitle(i)
+        plt.pause(0.1)
 
     print(round(vectorQuantization.get_cluster_center_sum() * max_val, 4))
 

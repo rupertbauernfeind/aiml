@@ -7,6 +7,8 @@ class VectorQuantization:
     def __init__(self, clusters):
         self.clusters = []
         for i in range(0, clusters):
+            # random_w = self.random_of_range(-1 + i * (2 / clusters), -1 + (i + 1) * (2 / clusters))
+            # self.clusters.append(Cluster(-0.75 + i * (2 / clusters), 0, colorList[i % 4]))
             self.clusters.append(Cluster(-0.75 + i * (2 / clusters), 0))
 
     def center_weights(self, _patterns):
@@ -31,10 +33,10 @@ class VectorQuantization:
             self.clusters[i].w1 = most_dist_pattern[0]
             self.clusters[i].w2 = most_dist_pattern[1]
 
-    def train(self, x, y):
+    def train(self, x, y, learning_rate):
         # Get the winning Cluster
         c_win = self.__get_winning_cluster(x, y)
-        c_win.update_weight(x, y)
+        c_win.update_weight(x, y, learning_rate)
         return c_win
 
     def __get_winning_cluster(self, x, y):
@@ -53,24 +55,26 @@ class VectorQuantization:
             center_sum += c.w1 + c.w2
         return center_sum
 
+
     @staticmethod
     def random_of_range(min_range, max_range):
         return random.randrange(min_range * 100, max_range * 100, 1) / 100  # 000
 
 
 class Cluster:
-    def __init__(self, w1, w2):
+    def __init__(self, w1, w2, color="Black"):
         self.w1 = w1
         self.w2 = w2
+        self.color = color
 
     def get_distance(self, x, y):
         dx = self.w1 - x
         dy = self.w2 - y
         return math.sqrt((dx ** 2) + (dy ** 2))
 
-    def update_weight(self, x, y):
-        self.w1 += (x - self.w1) * 0.001
-        self.w2 += (y - self.w2) * 0.001
+    def update_weight(self, x, y, learning_rate):
+        self.w1 += (x - self.w1) * learning_rate
+        self.w2 += (y - self.w2) * learning_rate
 
 
 def load_normalized_input_data():
@@ -118,8 +122,9 @@ if __name__ == "__main__":
     numberOfClusters, patterns, max_val = load_normalized_input_data()
     vectorQuantization = VectorQuantization(numberOfClusters)
     vectorQuantization.center_weights(patterns)
-    for _ in range(0, 300):
+    for i in range(1, 1000):
         for p in patterns:
-            c_win = vectorQuantization.train(p[0], p[1])
+            c_win = vectorQuantization.train(p[0], p[1], 0.1/i)
 
     print(round(vectorQuantization.get_cluster_center_sum() * max_val, 6))
+

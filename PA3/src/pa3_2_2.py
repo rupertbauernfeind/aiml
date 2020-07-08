@@ -69,8 +69,8 @@ class Cluster:
         return math.sqrt((dx ** 2) + (dy ** 2))
 
     def update_weight(self, x, y):
-        self.w1 += (x - self.w1) * 0.1
-        self.w2 += (y - self.w2) * 0.1
+        self.w1 += (x - self.w1) * 0.001
+        self.w2 += (y - self.w2) * 0.001
 
 
 def load_normalized_input_data():
@@ -118,8 +118,9 @@ if __name__ == "__main__":
     numberOfClusters, patterns, max_val = load_normalized_input_data()
     vectorQuantization = VectorQuantization(numberOfClusters)
     vectorQuantization.center_weights(patterns)
-    for _ in range(0, 3):
+    for _ in range(0, 300):
         for p in patterns:
             c_win = vectorQuantization.train(p[0], p[1])
 
     print(vectorQuantization.get_cluster_center_sum())
+

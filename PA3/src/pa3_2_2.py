@@ -122,4 +122,4 @@ if __name__ == "__main__":
         for p in patterns:
             c_win = vectorQuantization.train(p[0], p[1])
 
-    print(vectorQuantization.get_cluster_center_sum() * max_val)
+    print(round(vectorQuantization.get_cluster_center_sum() * max_val, 6))

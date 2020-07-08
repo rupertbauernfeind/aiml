@@ -105,10 +105,10 @@ def load_normalized_input_data():
         if abs(_p[1] > max_abs):
             max_abs = abs(_p[1])
 
-    # for i in range(0, len(_patterns)):
-    #    x_norm = _patterns[i][0] / max_abs
-    #    y_norm = _patterns[i][1] / max_abs
-    #    _patterns[i] = (x_norm, y_norm)
+    for i in range(0, len(_patterns)):
+        x_norm = _patterns[i][0] / max_abs
+        y_norm = _patterns[i][1] / max_abs
+        _patterns[i] = (x_norm, y_norm)
 
     return int(numberOfCluster), _patterns, max_abs
 
@@ -122,5 +122,4 @@ if __name__ == "__main__":
         for p in patterns:
             c_win = vectorQuantization.train(p[0], p[1])
 
-    print(vectorQuantization.get_cluster_center_sum())
-
+    print(vectorQuantization.get_cluster_center_sum() * max_val)
